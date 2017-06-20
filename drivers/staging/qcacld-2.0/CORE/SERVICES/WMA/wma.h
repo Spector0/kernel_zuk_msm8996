@@ -305,14 +305,6 @@ typedef struct {
 	HTC_ENDPOINT_ID endpoint_id;
 }t_cfg_nv_param;
 
-typedef enum
-{
-	WMA_DRIVER_TYPE_PRODUCTION  = 0,
-	WMA_DRIVER_TYPE_MFG         = 1,
-	WMA_DRIVER_TYPE_DVT         = 2,
-	WMA_DRIVER_TYPE_INVALID     = 0x7FFFFFFF
-}t_wma_drv_type;
-
 typedef enum {
 	WMA_STATE_OPEN,
 	WMA_STATE_START,
@@ -732,7 +724,7 @@ typedef struct wma_handle {
 	v_U16_t max_station;
 	v_U16_t max_bssid;
 	v_U32_t frame_xln_reqd;
-	t_wma_drv_type driver_type;
+	tDriverType driver_type;
 
 	/* TODO: Check below 2 parameters are required for ROME/PRONTO ? */
 	u_int8_t myaddr[ETH_ALEN]; /* current mac address */
@@ -1002,7 +994,7 @@ typedef struct
   v_U16_t usConfigBufferLen;
 
   /*Production or FTM driver*/
-  t_wma_drv_type driver_type;
+  tDriverType driver_type;
 
   /*The user data passed in by UMAC, it will be sent back when the above
     function pointer will be called */

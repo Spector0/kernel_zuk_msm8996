@@ -1053,7 +1053,8 @@ typedef enum
 {
     eDRIVER_TYPE_PRODUCTION  = 0,
     eDRIVER_TYPE_MFG         = 1,
-    eDRIVER_TYPE_DVT         = 2
+    eDRIVER_TYPE_DVT         = 2,
+    eDRIVER_TYPE_INVALID     = 0x7FFFFFFF
 } tDriverType;
 
 /** ------------------------------------------------------------------------- *
