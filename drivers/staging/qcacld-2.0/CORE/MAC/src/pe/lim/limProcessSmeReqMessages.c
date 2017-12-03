@@ -2570,7 +2570,8 @@ __limProcessSmeReassocReq(tpAniSirGlobal pMac, tANI_U32 *pMsgBuf)
 
        if (psessionEntry != NULL)
                    limHandleSmeJoinResult(pMac, eSIR_SME_INVALID_PARAMETERS,
-                                 eSIR_MAC_UNSPEC_FAILURE_STATUS, psessionEntry);
+                                 (tSirResultCodes) eSIR_MAC_UNSPEC_FAILURE_STATUS,
+                                 psessionEntry);
        goto end;
     }
 
