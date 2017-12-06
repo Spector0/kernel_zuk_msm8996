@@ -23575,11 +23575,8 @@ tANI_U32 dot11fGetPackedIERSN(tpAniSirGlobal pCtx, tDot11fIERSN *pIe, tANI_U32 *
         }
         else break;
         *pnNeeded += ( pIe->akm_suite_cnt * 4 );
-        if ( pIe->RSN_Cap_present)
-        {
-            *pnNeeded += 2;
-        }
-        else break;
+	/* RSN_Cap */
+	*pnNeeded += 2;
         if ( pIe->pmkid_count )
         {
             *pnNeeded += 2;
@@ -31722,12 +31719,10 @@ tANI_U32 dot11fPackIeRSN(tpAniSirGlobal pCtx,
         DOT11F_MEMCPY(pCtx, pBuf, &( pSrc->akm_suite ), ( pSrc->akm_suite_cnt * 4 ));
         *pnConsumed += ( pSrc->akm_suite_cnt * 4 );
         pBuf += ( pSrc->akm_suite_cnt * 4 );
-        if ( pSrc->RSN_Cap_present )        {
-            DOT11F_MEMCPY(pCtx, pBuf, pSrc->RSN_Cap, 2);
-            *pnConsumed += 2;
-            pBuf += 2;
-        }
-        else break;
+	/* RSN_Cap */
+	DOT11F_MEMCPY(pCtx, pBuf, pSrc->RSN_Cap, 2);
+	*pnConsumed += 2;
+	pBuf += 2;
         if ( pSrc->pmkid_count )        {
             frameshtons(pCtx, pBuf, pSrc->pmkid_count, 0);
             *pnConsumed += 2;
