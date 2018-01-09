@@ -23586,11 +23586,8 @@ tANI_U32 dot11fGetPackedIERSN(tpAniSirGlobal pCtx, tDot11fIERSN *pIe, tANI_U32 *
         }
         else break;
         *pnNeeded += ( pIe->pmkid_count * 16 );
-        if ( pIe->gp_mgmt_cipher_suite_present)
-        {
-            *pnNeeded += 4;
-        }
-        else break;
+	/* gp_mgmt_cipher_suite */
+	*pnNeeded += 4;
         break;
     }
     return status;
@@ -31740,12 +31737,10 @@ tANI_U32 dot11fPackIeRSN(tpAniSirGlobal pCtx,
         DOT11F_MEMCPY(pCtx, pBuf, &( pSrc->pmkid ), ( pSrc->pmkid_count * 16 ));
         *pnConsumed += ( pSrc->pmkid_count * 16 );
         pBuf += ( pSrc->pmkid_count * 16 );
-        if ( pSrc->gp_mgmt_cipher_suite_present )        {
-            DOT11F_MEMCPY(pCtx, pBuf, pSrc->gp_mgmt_cipher_suite, 4);
-            *pnConsumed += 4;
-            // fieldsEndFlag = 1
-        }
-        else break;
+	/* gp_mgmt_cipher_suite */
+	DOT11F_MEMCPY(pCtx, pBuf, pSrc->gp_mgmt_cipher_suite, 4);
+	*pnConsumed += 4;
+	/* fieldsEndFlag = 1 */
         break;
     }
     (void)pCtx;
