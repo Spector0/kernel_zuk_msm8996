@@ -1288,7 +1288,11 @@ static int swrm_get_logical_dev_num(struct swr_master *mstr, u64 dev_id,
 {
 	int i;
 	u64 id = 0;
+#ifndef CONFIG_MACH_ZUK_Z2_PLUS
 	int ret = -EINVAL;
+#else
+	int ret = 0;
+#endif
 	struct swr_mstr_ctrl *swrm = swr_get_ctrl_data(mstr);
 
 	if (!swrm) {
