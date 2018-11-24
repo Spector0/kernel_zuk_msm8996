@@ -47,12 +47,11 @@ struct fpc1020_data {
 	struct notifier_block fb_notif;
 	/*Input device*/
 	struct input_dev *input_dev;
-	struct work_struct irq_work;
+	struct work_struct pm_work;
 	struct work_struct input_report_work;
 	struct workqueue_struct *fpc1020_wq;
 	u8  report_key;
 	int screen_on;
-	int proximity_state; /* 0:far 1:near */
 };
 
 /* From drivers/input/keyboard/gpio_keys.c */
@@ -80,10 +79,10 @@ static ssize_t irq_set(struct device *device,
 		const char *buffer, size_t count)
 {
 	int retval = 0;
-	unsigned int val;
+	u64 val;
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(device);
 
-	retval = kstrtouint(buffer, 0, &val);
+	retval = kstrtou64(buffer, 0, &val);
 	if (val == 1)
 		enable_irq(fpc1020->irq);
 	else if (val == 0)
@@ -108,11 +107,11 @@ static ssize_t set_key(struct device *device,
 		const char *buffer, size_t count)
 {
 	int retval = 0;
-	unsigned int val;
+	u64 val;
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(device);
 	bool home_pressed;
 
-	retval = kstrtouint(buffer, 0, &val);
+	retval = kstrtou64(buffer, 0, &val);
 	if (!retval) {
 		if (val == KEY_HOME)
 			/* Convert to U-touch long press keyValue */
@@ -165,24 +164,9 @@ static ssize_t utouch_store_disable(struct device *dev,
 }
 static DEVICE_ATTR(utouch_disable, S_IRUGO|S_IWUSR, utouch_show_disable, utouch_store_disable);
 
-static ssize_t proximity_state_set(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
-	int rc, val;
-	rc = kstrtoint(buf, 10, &val);
-	if (rc)
-		return -EINVAL;
-	fpc1020->proximity_state = !!val;
-
-	return count;
-}
-static DEVICE_ATTR(proximity_state, S_IWUSR, NULL, proximity_state_set);
-
 static struct attribute *attributes[] = {
 	&dev_attr_irq.attr,
 	&dev_attr_key.attr,
-	&dev_attr_proximity_state.attr,
 	&dev_attr_utouch_disable.attr,
 	NULL
 };
@@ -251,29 +235,16 @@ err:
 	return retval;
 }
 
-static void fpc1020_irq_work(struct work_struct *work)
-{
-	struct fpc1020_data *fpc1020 = NULL;
-
-	fpc1020 = container_of(work, struct fpc1020_data, irq_work);
-
-	smp_rmb();
-	if (fpc1020->screen_on == 0) {
-		if (fpc1020->proximity_state == 1)
-			return;
-		pm_wakeup_event(fpc1020->dev, 5000);
-	}
-	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
-}
-
 static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 {
 	struct fpc1020_data *fpc1020 = _fpc1020;
 
-	pr_debug("fpc1020 IRQ interrupt\n");
-
-	queue_work(fpc1020->fpc1020_wq, &fpc1020->irq_work);
-
+	pr_info("fpc1020 IRQ interrupt\n");
+	smp_rmb();
+	if (fpc1020->screen_on == 0) {
+		pm_wakeup_event(fpc1020->dev, 5000);
+	}
+	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 	return IRQ_HANDLED;
 }
 
@@ -376,6 +347,18 @@ static void set_fingerprintd_nice(int nice)
 	read_unlock(&tasklist_lock);
 }
 
+static void fpc1020_suspend_resume(struct work_struct *work)
+{
+	struct fpc1020_data *fpc1020 =
+		container_of(work, typeof(*fpc1020), pm_work);
+
+	/* Escalate fingerprintd priority when screen is off */
+	if (!fpc1020->screen_on)
+		set_fingerprintd_nice(MIN_NICE);
+	else
+		set_fingerprintd_nice(0);
+}
+
 static int fb_notifier_callback(struct notifier_block *self,
 		unsigned long event, void *data)
 {
@@ -383,16 +366,17 @@ static int fb_notifier_callback(struct notifier_block *self,
 	struct fb_event *evdata = data;
 
 	struct fpc1020_data *fpc1020 = container_of(self, struct fpc1020_data, fb_notif);
+	blank = evdata->data;
 	if (evdata && evdata->data && event == FB_EVENT_BLANK && fpc1020) {
 		blank = evdata->data;
 		if (*blank == FB_BLANK_UNBLANK) {
 			pr_err("ScreenOn\n");
 			fpc1020->screen_on = 1;
-			set_fingerprintd_nice(0);
+			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_err("ScreenOff\n");
 			fpc1020->screen_on = 0;
-			set_fingerprintd_nice(-1);
+			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 		}
 	}
 	return 0;
@@ -440,7 +424,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto error_unregister_device;
 	}
 	INIT_WORK(&fpc1020->input_report_work, fpc1020_report_work_func);
-	INIT_WORK(&fpc1020->irq_work, fpc1020_irq_work);
+	INIT_WORK(&fpc1020->pm_work, fpc1020_suspend_resume);
 	gpio_direction_output(fpc1020->reset_gpio, 1);
 	/*Do HW reset*/
 	fpc1020_hw_reset(fpc1020);
