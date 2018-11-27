@@ -36,7 +36,6 @@ int gt1x_int_gpio;
 static atomic_t gt_device_count;
 #endif
 
-static struct pm_qos_request pm_qos_req;
 static int gt1x_register_powermanger(void);
 static int gt1x_unregister_powermanger(void);
 static irqreturn_t gt1x_ts_irq_handler(int irq, void *dev_id);
