@@ -1739,7 +1739,6 @@ endif
 # Disable certain flags for Clang as they are spammy and I'm not fixing them :^)
 ifeq ($(cc-name),clang)
 EXTRA_CFLAGS += -Wno-enum-conversion
-EXTRA_CFLAGS += -Wno-non-literal-null-conversion
 endif
 
 # If the module name is not "wlan", then the define MULTI_IF_NAME to be the
